@@ -1,0 +1,191 @@
+{
+  "dataset_name": "streamvln_office_indoor_prompts",
+  "version": "1.0.0",
+  "language": "zh-CN",
+  "environment": "office-indoor",
+  "description": "经典办公室室内导航指令集合，可用于 StreamVLN 连续视觉导航评测与回放测试。",
+  "fields": {
+    "id": "提示词唯一标识",
+    "instruction": "给导航模型的自然语言指令",
+    "category": "场景类别",
+    "difficulty": "easy | medium | hard",
+    "tags": "检索标签"
+  },
+  "prompts": [
+    {
+      "id": "office_001",
+      "instruction": "沿着主走廊直行，到第一个十字路口后右转，继续前进到饮水机旁停下。",
+      "category": "基础走廊导航",
+      "difficulty": "easy",
+      "tags": ["直行", "右转", "地标"]
+    },
+    {
+      "id": "office_002",
+      "instruction": "从当前位置出发，靠左侧通道前进，经过两扇玻璃门后在开放工位区入口停下。",
+      "category": "基础走廊导航",
+      "difficulty": "easy",
+      "tags": ["靠左", "玻璃门", "工位区"]
+    },
+    {
+      "id": "office_003",
+      "instruction": "沿走廊前进，看到打印区后左转进入，停在打印机正前方。",
+      "category": "地标驱动导航",
+      "difficulty": "easy",
+      "tags": ["打印区", "左转", "目标点"]
+    },
+    {
+      "id": "office_004",
+      "instruction": "直行到尽头，在消防栓标识处右转，进入会议室通道后在第二个门口停下。",
+      "category": "地标驱动导航",
+      "difficulty": "medium",
+      "tags": ["尽头转向", "消防栓", "门计数"]
+    },
+    {
+      "id": "office_005",
+      "instruction": "前进并保持在通道中线，经过前台后左转，走到背景墙 Logo 处停止。",
+      "category": "前台区域导航",
+      "difficulty": "easy",
+      "tags": ["中线", "前台", "Logo"]
+    },
+    {
+      "id": "office_006",
+      "instruction": "向前移动，避开通道中的椅子和箱子，在靠近电梯厅前减速并停下。",
+      "category": "动态避障",
+      "difficulty": "medium",
+      "tags": ["避障", "电梯厅", "减速"]
+    },
+    {
+      "id": "office_007",
+      "instruction": "从当前点前往茶水间：沿右侧墙前进，见到冰箱后右转进入并停在水槽前。",
+      "category": "功能区导航",
+      "difficulty": "medium",
+      "tags": ["右侧墙", "冰箱", "茶水间"]
+    },
+    {
+      "id": "office_008",
+      "instruction": "沿主走廊前进到拐角，左转后继续行驶，进入安静办公区前停下。",
+      "category": "功能区导航",
+      "difficulty": "easy",
+      "tags": ["拐角", "左转", "办公区"]
+    },
+    {
+      "id": "office_009",
+      "instruction": "前往最近的空会议室：沿通道前进，遇到岔路向左，停在门牌写有 Meeting 的门前。",
+      "category": "会议室导航",
+      "difficulty": "medium",
+      "tags": ["岔路", "门牌识别", "会议室"]
+    },
+    {
+      "id": "office_010",
+      "instruction": "直行通过开放区，避开行人后在白板墙前 1 米位置停止。",
+      "category": "动态避障",
+      "difficulty": "medium",
+      "tags": ["行人", "白板墙", "距离控制"]
+    },
+    {
+      "id": "office_011",
+      "instruction": "向前到电梯厅，保持靠右行驶，经过灭火器后在电梯按钮面板前停下。",
+      "category": "电梯厅导航",
+      "difficulty": "easy",
+      "tags": ["靠右", "灭火器", "电梯面板"]
+    },
+    {
+      "id": "office_012",
+      "instruction": "沿走廊前进，经过第一个会议室后不要转弯，继续直行到窗边休息区停下。",
+      "category": "顺序约束导航",
+      "difficulty": "medium",
+      "tags": ["经过但不停", "顺序", "休息区"]
+    },
+    {
+      "id": "office_013",
+      "instruction": "先右转进入侧走廊，再左转回到主通道，最终停在前台对面。",
+      "category": "多步转向",
+      "difficulty": "medium",
+      "tags": ["右转", "左转", "多段路径"]
+    },
+    {
+      "id": "office_014",
+      "instruction": "保持直行直到看到绿色紧急出口标识，在其下方门口前停止。",
+      "category": "视觉地标导航",
+      "difficulty": "easy",
+      "tags": ["出口标识", "门口", "视觉目标"]
+    },
+    {
+      "id": "office_015",
+      "instruction": "沿当前走廊前进，遇到移动障碍时短暂停顿并绕行，继续到文印室门口。",
+      "category": "动态避障",
+      "difficulty": "hard",
+      "tags": ["移动障碍", "绕行", "恢复导航"]
+    },
+    {
+      "id": "office_016",
+      "instruction": "从当前位置前往工位区 A：穿过玻璃隔断后右转，走到 A 区编号牌附近停下。",
+      "category": "区域定位导航",
+      "difficulty": "medium",
+      "tags": ["玻璃隔断", "区域编号", "右转"]
+    },
+    {
+      "id": "office_017",
+      "instruction": "沿左侧通道前进到尽头，原地左转 90 度，进入短走廊后在第二个门前停下。",
+      "category": "角度与计数",
+      "difficulty": "hard",
+      "tags": ["90度", "门计数", "尽头转向"]
+    },
+    {
+      "id": "office_018",
+      "instruction": "前进到接待区，保持和前台桌边平行，最终停在访客等候沙发前。",
+      "category": "姿态约束导航",
+      "difficulty": "hard",
+      "tags": ["平行对齐", "接待区", "沙发"]
+    },
+    {
+      "id": "office_019",
+      "instruction": "穿过长走廊时保持中速，经过两处柱子后减速，在拐角处准备右转并停下。",
+      "category": "速度控制导航",
+      "difficulty": "medium",
+      "tags": ["速度策略", "柱子", "拐角"]
+    },
+    {
+      "id": "office_020",
+      "instruction": "去最近的楼梯间：直行到尽头左转，看到安全出口门后停在门前半米。",
+      "category": "应急出口导航",
+      "difficulty": "easy",
+      "tags": ["楼梯间", "左转", "距离约束"]
+    },
+    {
+      "id": "office_021",
+      "instruction": "先前往打印区确认位置，再返回主走廊并继续到茶水间入口停下。",
+      "category": "往返复合任务",
+      "difficulty": "hard",
+      "tags": ["子任务", "返回", "复合路径"]
+    },
+    {
+      "id": "office_022",
+      "instruction": "在拥挤工位区低速前进，优先保持与人员安全距离，最终停在过道中心。",
+      "category": "拥挤环境导航",
+      "difficulty": "hard",
+      "tags": ["低速", "安全距离", "拥挤场景"]
+    },
+    {
+      "id": "office_023",
+      "instruction": "沿窗边走廊直行到转角，左转后在带植物装饰的休息区入口处停下。",
+      "category": "视觉语义导航",
+      "difficulty": "medium",
+      "tags": ["窗边", "植物", "休息区"]
+    },
+    {
+      "id": "office_024",
+      "instruction": "保持右侧行驶规则，连续通过两个路口，在第三个路口左转后立刻停止。",
+      "category": "规则约束导航",
+      "difficulty": "hard",
+      "tags": ["右侧通行", "路口计数", "即时停止"]
+    },
+    {
+      "id": "office_025",
+      "instruction": "前往 IT 机房外通道：经过前台后右转，避开临时施工围挡，停在门禁外。",
+      "category": "复杂障碍导航",
+      "difficulty": "hard",
+      "tags": ["施工围挡", "门禁", "机房"]
+    }
+  ]
+}

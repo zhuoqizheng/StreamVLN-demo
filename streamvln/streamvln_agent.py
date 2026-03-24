@@ -37,7 +37,11 @@ class VLNEvaluator:
         args: argparse.Namespace = None,
     ):
         self.args = args
-        self.device = torch.device('cuda:0')
+        requested_device = getattr(args, "device", "cuda:0" if torch.cuda.is_available() else "cpu")
+        if isinstance(requested_device, str) and requested_device.startswith("cuda") and not torch.cuda.is_available():
+            print(f"[WARN] Requested device '{requested_device}' but CUDA is unavailable. Falling back to CPU.")
+            requested_device = "cpu"
+        self.device = torch.device(requested_device)
         self.sim_sensors_config = sim_sensors_config
         self.intrinsic_matrix = self.sim_sensors_config["camera_intrinsic"] #(4,4)
         self.image_processor = model.get_vision_tower().image_processor
@@ -110,9 +114,6 @@ class VLNEvaluator:
         roles = {"human": "user", "gpt": "assistant"}        
         image_token_index = tokenizer.convert_tokens_to_ids("<image>")
         memory_token_index = tokenizer.convert_tokens_to_ids("<memory>")
-        im_start, im_end = tokenizer.additional_special_tokens_ids
-        unmask_tokens_idx =  [198, im_start, im_end]
-        nl_tokens = tokenizer("\n").input_ids
         # Reset Qwen chat templates so that it won't include system message every time we apply
         chat_template = "{% for message in messages %}{{'<|im_start|>' + message['role'] + '\n' + message['content'] + '<|im_end|>' + '\n'}}{% endfor %}{% if add_generation_prompt %}{{ '<|im_start|>assistant\n' }}{% endif %}"
         tokenizer.chat_template = chat_template
@@ -237,7 +238,8 @@ class VLNEvaluator:
         
         for key, value in input_dict.items():
             if key in ['images', 'depths', 'poses', 'intrinsics']:
-                input_dict[key] = input_dict[key].to(torch.bfloat16)
+                cast_dtype = torch.bfloat16 if self.device.type == 'cuda' else torch.float32
+                input_dict[key] = input_dict[key].to(cast_dtype)
         
         # Step 4. Generate
         tt = time.time()
@@ -269,7 +271,7 @@ if __name__ == "__main__":
     parser.add_argument("--num_history", type=int, default=8)
     parser.add_argument("--model_max_length", type=int, default=4096,
                         help= "Maximum sequence length. Sequences will be right padded (and possibly truncated).")
-    parser.add_argument('--device', default='cuda:0',
+    parser.add_argument('--device', default='cuda:0' if torch.cuda.is_available() else 'cpu',
                         help='device to use for testing')
     
     args = parser.parse_args()

@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>VLN Web Client</title>
+    <style>
+        :root {
+            --bg: #0f172a;
+            --panel: #111827;
+            --panel-2: #1f2937;
+            --text: #e5e7eb;
+            --muted: #94a3b8;
+            --ok: #22c55e;
+            --warn: #f59e0b;
+            --danger: #ef4444;
+            --accent: #0ea5e9;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+            color: var(--text);
+            background: radial-gradient(circle at 20% 20%, #1e293b 0%, var(--bg) 50%), var(--bg);
+            min-height: 100vh;
+        }
+
+        .wrap {
+            max-width: 1100px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .panel {
+            background: linear-gradient(160deg, rgba(31, 41, 55, 0.95), rgba(17, 24, 39, 0.95));
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            border-radius: 16px;
+            padding: 16px;
+            backdrop-filter: blur(4px);
+        }
+
+        h1 {
+            margin: 0 0 12px 0;
+            font-size: 28px;
+            letter-spacing: 0.5px;
+        }
+
+        .row {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 16px;
+        }
+
+        .video-box {
+            position: relative;
+            background: #000;
+            border-radius: 12px;
+            overflow: hidden;
+            border: 1px solid rgba(148, 163, 184, 0.2);
+        }
+
+        video {
+            width: 100%;
+            height: auto;
+            display: block;
+            background: #000;
+        }
+
+        .controls {
+            display: grid;
+            gap: 10px;
+        }
+
+        label {
+            color: var(--muted);
+            font-size: 13px;
+        }
+
+        input, select, textarea {
+            width: 100%;
+            border-radius: 10px;
+            border: 1px solid rgba(148, 163, 184, 0.35);
+            background: var(--panel-2);
+            color: var(--text);
+            padding: 10px;
+            outline: none;
+        }
+
+        textarea {
+            min-height: 88px;
+            resize: vertical;
+        }
+
+        button {
+            border: 0;
+            border-radius: 10px;
+            padding: 10px 12px;
+            color: #fff;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.08s ease, opacity 0.2s ease;
+        }
+
+        button:active { transform: translateY(1px); }
+
+        .btn-primary { background: var(--accent); }
+        .btn-ok { background: var(--ok); }
+        .btn-warn { background: var(--warn); color: #111827; }
+
+        .status {
+            margin-top: 12px;
+            padding: 10px;
+            border-radius: 10px;
+            background: rgba(148, 163, 184, 0.12);
+            color: var(--muted);
+            min-height: 44px;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+
+        .status.ok { color: #86efac; }
+        .status.err { color: #fca5a5; }
+
+        .action-visual {
+            margin-top: 12px;
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            border-radius: 12px;
+            background: rgba(2, 6, 23, 0.55);
+            padding: 12px;
+            min-height: 84px;
+        }
+
+        .action-strip {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .action-item {
+            min-width: 78px;
+            border-radius: 10px;
+            padding: 8px 10px;
+            text-align: center;
+            border: 1px solid rgba(148, 163, 184, 0.28);
+            background: rgba(30, 41, 59, 0.65);
+        }
+
+        .action-icon {
+            font-size: 24px;
+            line-height: 1;
+            margin-bottom: 4px;
+        }
+
+        .action-name {
+            font-size: 12px;
+            color: var(--muted);
+        }
+
+        .action-sep {
+            font-size: 18px;
+            color: #64748b;
+            line-height: 1;
+        }
+
+        .action-empty {
+            color: var(--muted);
+            font-size: 14px;
+        }
+
+        .result {
+            margin-top: 16px;
+            background: rgba(2, 6, 23, 0.8);
+            border: 1px solid rgba(148, 163, 184, 0.2);
+            border-radius: 12px;
+            padding: 12px;
+            font-family: Consolas, "Courier New", monospace;
+            white-space: pre-wrap;
+            word-break: break-word;
+            min-height: 90px;
+        }
+
+        @media (max-width: 900px) {
+            .row { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+<div class="wrap">
+    <h1>VLN Web Client (No cv2)</h1>
+    <div class="panel">
+        <div class="row">
+            <div class="video-box">
+                <video id="video" autoplay playsinline muted></video>
+            </div>
+            <div class="controls">
+                <div>
+                    <label for="cameraSelect">摄像头设备</label>
+                    <select id="cameraSelect"></select>
+                </div>
+                <div>
+                    <label for="serverUrl">VLN 服务地址</label>
+                    <input id="serverUrl" type="text" value="{{ default_server_url }}">
+                </div>
+                <div>
+                    <label for="instruction">Instruction</label>
+                    <textarea id="instruction" placeholder="例如：向前走到门口，再左转">{{ default_instruction }}</textarea>
+                </div>
+                <div>
+                    <label for="intervalMs">自动调用间隔 (ms)</label>
+                    <input id="intervalMs" type="number" min="100" step="100" value="600">
+                </div>
+                <div>
+                    <button class="btn-primary" id="startBtn">启动摄像头</button>
+                </div>
+                <div>
+                    <button class="btn-ok" id="callBtn" disabled>单次调用</button>
+                    <button class="btn-warn" id="resetBtn" disabled>Reset并调用</button>
+                </div>
+                <div>
+                    <button class="btn-primary" id="autoBtn" disabled>开始自动调用</button>
+                </div>
+            </div>
+        </div>
+
+        <div id="status" class="status">等待启动摄像头...</div>
+        <div id="actionVisual" class="action-visual"></div>
+        <div id="result" class="result">Actions: []</div>
+    </div>
+</div>
+
+<canvas id="canvas" style="display:none"></canvas>
+
+<script>
+(() => {
+    const video = document.getElementById('video');
+    const cameraSelect = document.getElementById('cameraSelect');
+    const serverUrl = document.getElementById('serverUrl');
+    const instructionInput = document.getElementById('instruction');
+    const intervalMsInput = document.getElementById('intervalMs');
+    const startBtn = document.getElementById('startBtn');
+    const callBtn = document.getElementById('callBtn');
+    const resetBtn = document.getElementById('resetBtn');
+    const autoBtn = document.getElementById('autoBtn');
+    const statusEl = document.getElementById('status');
+    const actionVisualEl = document.getElementById('actionVisual');
+    const resultEl = document.getElementById('result');
+    const canvas = document.getElementById('canvas');
+
+    const ACTION_NAME = {
+        0: 'STOP',
+        1: 'FORWARD',
+        2: 'LEFT',
+        3: 'RIGHT'
+    };
+
+    let mediaStream = null;
+    let autoTimer = null;
+
+    function setStatus(msg, cls) {
+        statusEl.textContent = msg;
+        statusEl.className = 'status' + (cls ? ' ' + cls : '');
+    }
+
+    function actionsToText(actions) {
+        if (!Array.isArray(actions) || actions.length === 0) return '[]';
+        return actions.map((a) => ACTION_NAME[a] || ('UNK(' + a + ')')).join(' -> ');
+    }
+
+    function actionMeta(action) {
+        if (action === 0) return { icon: '■', name: 'STOP' };
+        if (action === 1) return { icon: '↑', name: 'FORWARD' };
+        if (action === 2) return { icon: '←', name: 'LEFT' };
+        if (action === 3) return { icon: '→', name: 'RIGHT' };
+        return { icon: '?', name: 'UNK(' + action + ')' };
+    }
+
+    function renderActionArrows(actions) {
+        actionVisualEl.innerHTML = '';
+
+        if (!Array.isArray(actions) || actions.length === 0) {
+            const empty = document.createElement('div');
+            empty.className = 'action-empty';
+            empty.textContent = '等待动作返回...';
+            actionVisualEl.appendChild(empty);
+            return;
+        }
+
+        const strip = document.createElement('div');
+        strip.className = 'action-strip';
+
+        actions.forEach((action, idx) => {
+            const meta = actionMeta(action);
+
+            const item = document.createElement('div');
+            item.className = 'action-item';
+
+            const icon = document.createElement('div');
+            icon.className = 'action-icon';
+            icon.textContent = meta.icon;
+
+            const name = document.createElement('div');
+            name.className = 'action-name';
+            name.textContent = meta.name;
+
+            item.appendChild(icon);
+            item.appendChild(name);
+            strip.appendChild(item);
+
+            if (idx < actions.length - 1) {
+                const sep = document.createElement('div');
+                sep.className = 'action-sep';
+                sep.textContent = '→';
+                strip.appendChild(sep);
+            }
+        });
+
+        actionVisualEl.appendChild(strip);
+    }
+
+    async function listCameras() {
+        const devices = await navigator.mediaDevices.enumerateDevices();
+        const cams = devices.filter((d) => d.kind === 'videoinput');
+        cameraSelect.innerHTML = '';
+        cams.forEach((cam, idx) => {
+            const opt = document.createElement('option');
+            opt.value = cam.deviceId;
+            opt.textContent = cam.label || ('Camera ' + (idx + 1));
+            cameraSelect.appendChild(opt);
+        });
+    }
+
+    async function startCamera() {
+        if (mediaStream) {
+            mediaStream.getTracks().forEach((t) => t.stop());
+            mediaStream = null;
+        }
+
+        const deviceId = cameraSelect.value;
+        const constraints = {
+            audio: false,
+            video: deviceId
+                ? { deviceId: { exact: deviceId }, width: { ideal: 1280 }, height: { ideal: 720 } }
+                : { width: { ideal: 1280 }, height: { ideal: 720 } }
+        };
+
+        mediaStream = await navigator.mediaDevices.getUserMedia(constraints);
+        video.srcObject = mediaStream;
+        await video.play();
+
+        callBtn.disabled = false;
+        resetBtn.disabled = false;
+        autoBtn.disabled = false;
+        setStatus('摄像头已启动，可进行 VLN 调用。', 'ok');
+    }
+
+    function captureDataUrl() {
+        const w = video.videoWidth || 1280;
+        const h = video.videoHeight || 720;
+        canvas.width = w;
+        canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(video, 0, 0, w, h);
+        return canvas.toDataURL('image/jpeg', 0.9);
+    }
+
+    async function callVln(reset) {
+        if (!mediaStream) {
+            setStatus('请先启动摄像头。', 'err');
+            return;
+        }
+
+        try {
+            const imageDataUrl = captureDataUrl();
+            const payload = {
+                image_data_url: imageDataUrl,
+                reset: !!reset,
+                instruction: instructionInput.value.trim(),
+                server_url: serverUrl.value.trim(),
+                timeout: 30
+            };
+
+            const t0 = performance.now();
+            const resp = await fetch('/api/eval_vln', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            const data = await resp.json();
+
+            if (!resp.ok || !data.ok) {
+                throw new Error(data.error || 'unknown error');
+            }
+
+            const roundtrip = ((performance.now() - t0) / 1000).toFixed(3);
+            const actions = data.actions || [];
+            const actionText = actionsToText(actions);
+            renderActionArrows(actions);
+            resultEl.textContent = 'Actions: ' + JSON.stringify(actions) + '\n' +
+                'Text: ' + actionText + '\n' +
+                'Instruction: ' + (data.instruction || '(empty)') + '\n' +
+                'Server latency: ' + Number(data.latency).toFixed(3) + 's\n' +
+                'Roundtrip: ' + roundtrip + 's';
+            setStatus('调用成功。', 'ok');
+        } catch (err) {
+            setStatus('调用失败: ' + err.message, 'err');
+        }
+    }
+
+    function stopAuto() {
+        if (autoTimer) {
+            clearInterval(autoTimer);
+            autoTimer = null;
+            autoBtn.textContent = '开始自动调用';
+        }
+    }
+
+    function startAuto() {
+        const intervalMs = Math.max(100, Number(intervalMsInput.value) || 600);
+        autoTimer = setInterval(() => { callVln(false); }, intervalMs);
+        autoBtn.textContent = '停止自动调用';
+    }
+
+    startBtn.addEventListener('click', async () => {
+        try {
+            await navigator.mediaDevices.getUserMedia({ video: true, audio: false });
+            await listCameras();
+            await startCamera();
+        } catch (err) {
+            setStatus('摄像头启动失败: ' + err.message, 'err');
+        }
+    });
+
+    cameraSelect.addEventListener('change', async () => {
+        if (!cameraSelect.value) return;
+        try {
+            await startCamera();
+        } catch (err) {
+            setStatus('切换摄像头失败: ' + err.message, 'err');
+        }
+    });
+
+    callBtn.addEventListener('click', () => callVln(false));
+    resetBtn.addEventListener('click', () => callVln(true));
+
+    autoBtn.addEventListener('click', () => {
+        if (autoTimer) {
+            stopAuto();
+        } else {
+            startAuto();
+        }
+    });
+
+    window.addEventListener('beforeunload', () => {
+        stopAuto();
+        if (mediaStream) mediaStream.getTracks().forEach((t) => t.stop());
+    });
+
+    renderActionArrows([]);
+})();
+</script>
+</body>
+</html>

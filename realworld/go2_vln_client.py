@@ -1,6 +1,7 @@
 import rclpy
 import sys
 import threading
+import os
 import PIL.Image as PIL_Image
 import io
 import json
@@ -23,6 +24,7 @@ from unitree_api.msg import RequestHeader
 
 # user-specific
 from pid_controller import *
+from utils import ReadWriteLock
 # global variable
 policy_init = True
 pid = PID_controller(Kp_trans=3.0, Kd_trans=0.5, Kp_yaw=3.0, Kd_yaw=0.5, max_v=1.0, max_w=1.2)
@@ -32,8 +34,11 @@ rgb_rw_lock = ReadWriteLock()
 depth_rw_lock = ReadWriteLock()
 odom_rw_lock = ReadWriteLock()
     
-def eval_vln(image, depth, camera_pose, instruction, url='http://localhost:5801/eval_vln'):
+def eval_vln(image, depth, camera_pose, instruction, url=None):
     global policy_init
+    if url is None:
+        url = os.environ.get('STREAMVLN_SERVER_URL', 'http://localhost:5801/eval_vln')
+
     image = PIL_Image.fromarray(image)
     # image = image.resize((384, 384))
     image_bytes = io.BytesIO()
@@ -41,6 +46,9 @@ def eval_vln(image, depth, camera_pose, instruction, url='http://localhost:5801/
     image_bytes.seek(0)
     
     data = {"reset":policy_init}
+    instruction_text = instruction or os.environ.get('STREAMVLN_INSTRUCTION')
+    if instruction_text:
+        data['instruction'] = instruction_text
     json_data = json.dumps(data)
     policy_init = False
     
