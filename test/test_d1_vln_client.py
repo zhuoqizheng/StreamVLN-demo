@@ -6,6 +6,7 @@ import types
 
 import numpy as np
 import pytest
+from PIL import Image
 
 
 PROJECT_ROOT = pathlib.Path(__file__).resolve().parents[1]
@@ -162,3 +163,41 @@ def test_incremental_change_goal_updates_pose(d1_module):
     mgr.homo_goal = np.eye(4)
     d1_module.D1VlnManager.incremental_change_goal(mgr, [2, 3])
     assert np.allclose(mgr.homo_goal[:3, :3], np.eye(3), atol=1e-6)
+
+
+def test_eval_vln_with_sample_image_data(d1_module, monkeypatch, tmp_path):
+    sample_path = tmp_path / "sample_rgb.jpg"
+    sample_rgb = np.zeros((32, 48, 3), dtype=np.uint8)
+    sample_rgb[..., 0] = 220
+    sample_rgb[..., 1] = np.tile(np.arange(48, dtype=np.uint8), (32, 1))
+    sample_rgb[..., 2] = np.tile(np.arange(32, dtype=np.uint8).reshape(-1, 1), (1, 48))
+    Image.fromarray(sample_rgb).save(sample_path)
+
+    image = np.array(Image.open(sample_path).convert("RGB"))
+    captured = {"json": None, "jpeg_header": None}
+
+    class FakeResponse:
+        text = '{"action": [1, 1, 3, 0]}'
+
+        def raise_for_status(self):
+            return None
+
+        def json(self):
+            return {"action": [1, 1, 3, 0]}
+
+    def fake_post(_url, files, data, timeout):
+        _name, file_obj, _mime = files["image"]
+        file_obj.seek(0)
+        payload = file_obj.read()
+        captured["jpeg_header"] = payload[:2]
+        captured["json"] = json.loads(data["json"])
+        assert timeout > 0
+        return FakeResponse()
+
+    monkeypatch.setenv("STREAMVLN_INSTRUCTION", "沿主走廊前进")
+    monkeypatch.setattr(d1_module.requests, "post", fake_post)
+
+    actions = d1_module.eval_vln(image, instruction=None, url="http://server/eval_vln")
+    assert actions == [1, 1, 3, 0]
+    assert captured["json"]["instruction"] == "沿主走廊前进"
+    assert captured["jpeg_header"] == b"\xff\xd8"

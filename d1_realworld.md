@@ -4,6 +4,7 @@
 
 ## 1. 部署目标
 
+NEED TO ALIGH IP ADRRESS！！！
 在同一个 WiFi 局域网下联通三台设备：
 
 - 机器狗机载电脑：运行 [realworld/d1_vln_client.py](realworld/d1_vln_client.py)

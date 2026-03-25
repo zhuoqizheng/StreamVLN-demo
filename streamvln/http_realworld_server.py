@@ -215,7 +215,7 @@ if __name__ == '__main__':
                 attn_implementation="sdpa",
                 torch_dtype=model_dtype,
                 config=config,
-                low_cpu_mem_usage=True,
+                # low_cpu_mem_usage=True,
                 local_files_only=True,
                 )
     model.model.num_history = args.num_history

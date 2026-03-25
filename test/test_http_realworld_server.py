@@ -1,6 +1,7 @@
 import importlib.util
 import io
 import json
+import logging
 import pathlib
 import sys
 import types
@@ -12,9 +13,11 @@ from PIL import Image
 
 PROJECT_ROOT = pathlib.Path(__file__).resolve().parents[1]
 SERVER_PATH = PROJECT_ROOT / "streamvln" / "http_realworld_server.py"
+LOGGER = logging.getLogger(__name__)
 
 
 def _load_server_module():
+    LOGGER.info("Loading module from %s", SERVER_PATH)
     # Stub heavy model imports so route/unit tests can run in isolation.
     streamvln_agent_mod = types.ModuleType("streamvln.streamvln_agent")
 
@@ -45,6 +48,7 @@ def _load_server_module():
 
 
 def _make_jpeg_bytes():
+    LOGGER.debug("Creating synthetic JPEG bytes for upload")
     img = Image.new("RGB", (8, 8), color=(255, 0, 0))
     buf = io.BytesIO()
     img.save(buf, format="JPEG")
@@ -53,6 +57,7 @@ def _make_jpeg_bytes():
 
 @pytest.fixture
 def server_module(monkeypatch):
+    LOGGER.info("Preparing server fixture with mocked evaluator")
     module = _load_server_module()
 
     class FakeEvaluator:
@@ -74,6 +79,7 @@ def server_module(monkeypatch):
     module.idx = 0
     module.terminate = False
     module.total_generate_time = 0.0
+    LOGGER.info("Server fixture ready")
     return module
 
 
@@ -91,10 +97,12 @@ def server_module(monkeypatch):
     ],
 )
 def test_parse_bool(server_module, raw, expected):
+    LOGGER.debug("Asserting _parse_bool(%r) == %r", raw, expected)
     assert server_module._parse_bool(raw) is expected
 
 
 def test_to_action_list(server_module):
+    LOGGER.info("Testing _to_action_list conversions")
     assert server_module._to_action_list(None) == [0]
     assert server_module._to_action_list(np.array([1, 2])) == [1, 2]
     assert server_module._to_action_list([3, 4]) == [3, 4]
@@ -103,6 +111,7 @@ def test_to_action_list(server_module):
 def test_eval_vln_rejects_missing_image(server_module):
     client = server_module.app.test_client()
     resp = client.post("/eval_vln", data={}, content_type="multipart/form-data")
+    LOGGER.info("Missing image response status=%s body=%s", resp.status_code, resp.get_json())
     assert resp.status_code == 400
     assert "missing multipart image field" in resp.get_json()["error"]
 
@@ -114,6 +123,7 @@ def test_eval_vln_rejects_invalid_json_field(server_module):
         "json": "{bad-json",
     }
     resp = client.post("/eval_vln", data=data, content_type="multipart/form-data")
+    LOGGER.info("Invalid json response status=%s body=%s", resp.status_code, resp.get_json())
     assert resp.status_code == 400
     assert "invalid json field" in resp.get_json()["error"]
 
@@ -126,11 +136,42 @@ def test_eval_vln_success(server_module):
     }
 
     resp = client.post("/eval_vln", data=data, content_type="multipart/form-data")
+    LOGGER.info("Success response status=%s", resp.status_code)
     assert resp.status_code == 200
     payload = resp.get_json()
+    LOGGER.info("Success response payload=%s", payload)
 
     assert payload["action"] == [1, 2, 3, 0]
     assert payload["instruction"] == "沿走廊前进"
+    assert payload["frame_id"] == 1
+    assert payload["terminate"] is True
+    assert server_module.evaluator.reset_called is True
+
+
+def test_eval_vln_with_sample_image_file_field_and_plain_form(server_module, tmp_path):
+    # Build a richer sample image to emulate a camera frame.
+    sample_path = tmp_path / "sample_frame.jpg"
+    sample = np.zeros((36, 64, 3), dtype=np.uint8)
+    sample[..., 0] = 120
+    sample[..., 1] = np.tile(np.arange(64, dtype=np.uint8), (36, 1))
+    sample[..., 2] = np.tile(np.arange(36, dtype=np.uint8).reshape(-1, 1), (1, 64))
+    Image.fromarray(sample).save(sample_path)
+
+    client = server_module.app.test_client()
+    with sample_path.open("rb") as f:
+        data = {
+            "file": (io.BytesIO(f.read()), "sample_frame.jpg"),
+            "reset": "true",
+            "instruction_text": "沿着走廊前进后左转",
+        }
+        resp = client.post("/eval_vln", data=data, content_type="multipart/form-data")
+
+    LOGGER.info("Sample-image response status=%s", resp.status_code)
+    assert resp.status_code == 200
+    payload = resp.get_json()
+    LOGGER.info("Sample-image response payload=%s", payload)
+    assert payload["action"] == [1, 2, 3, 0]
+    assert payload["instruction"] == "沿着走廊前进后左转"
     assert payload["frame_id"] == 1
     assert payload["terminate"] is True
     assert server_module.evaluator.reset_called is True
@@ -142,8 +183,20 @@ def test_healthz(server_module):
     server_module.terminate = True
 
     resp = client.get("/healthz")
+    LOGGER.info("Healthz response status=%s", resp.status_code)
     assert resp.status_code == 200
     payload = resp.get_json()
+    LOGGER.info("Healthz response payload=%s", payload)
     assert payload["ok"] is True
     assert payload["step_id"] == 12
     assert payload["terminate"] is True
+
+
+if __name__ == "__main__":
+    import pytest
+
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s | %(levelname)s | %(name)s | %(message)s",
+    )
+    raise SystemExit(pytest.main(["-vv", "-s", "--log-cli-level=INFO", __file__]))
