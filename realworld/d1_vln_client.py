@@ -8,7 +8,7 @@ import time
 import PIL.Image as PIL_Image
 import numpy as np
 import requests
-import rclpy
+# import rclpy
 from cv_bridge import CvBridge
 from geometry_msgs.msg import Twist
 from nav_msgs.msg import Odometry
@@ -192,18 +192,114 @@ class D1VlnManager(Node):
         msg.angular.z = float(vyaw)
         self.cmd_pub.publish(msg)
 
-if __name__ == '__main__':
-    rclpy.init()
-    global manager
-    manager = D1VlnManager()
-    t1 = threading.Thread(target=control_thread, daemon=True)
-    t2 = threading.Thread(target=planning_thread, daemon=True)
+
+def test():
+    import numpy as np
+    import threading
+    import time
+    import math
+
+    # 用原有的 PID_controller
+    global pid, rgb_rw_lock, odom_rw_lock, eval_vln, manager
+    # 保持原有 pid
+    # 保持原有 ReadWriteLock
+    # mock eval_vln
+    def mock_eval_vln(image, instruction=None, url=None):
+        print("Mock eval_vln called")
+        # 固定返回：前进一步、左转、右转
+        return [1, 2, 3]
+    eval_vln = mock_eval_vln
+
+    # Dummy manager，保留接口
+    class DummyManager:
+        def __init__(self):
+            self.rgb_image = np.zeros((240, 320, 3), dtype=np.uint8)
+            self.homo_goal = pose_matrix(0, 0, 0)
+            self.homo_odom = pose_matrix(0, 0, 0)
+            self.vel = np.array([0.0, 0.0], dtype=np.float64)
+            self.request_cnt = 0
+            self.should_plan = True
+            self.instruction = "Test instruction"
+            self.step_forward_m = 0.25
+            self.turn_angle_rad = math.radians(15.0)
+            self.running = True
+        def trigger_replan(self):
+            self.should_plan = True
+        def incremental_change_goal(self, actions):
+            print("incremental_change_goal called with:", actions)
+            # 直接调用原有逻辑
+            D1VlnManager.incremental_change_goal(self, actions)
+            print("homo_goal after:", self.homo_goal)
+        def move(self, vx, vy, vyaw):
+            print(f"move called: vx={vx}, vy={vy}, vyaw={vyaw}")
+
+    manager = DummyManager()
+
+    # 线程函数
+    def control_thread():
+        for i in range(5):  # 控制循环次数
+            odom_rw_lock.acquire_read()
+            homo_odom = manager.homo_odom.copy() if manager.homo_odom is not None else None
+            vel = manager.vel.copy() if manager.vel is not None else None
+            homo_goal = manager.homo_goal.copy() if manager.homo_goal is not None else None
+            odom_rw_lock.release_read()
+            e_p, e_r = 0.0, 0.0
+            if homo_odom is not None and vel is not None and homo_goal is not None:
+                v, w, e_p, e_r = pid.solve(homo_odom, homo_goal, vel)
+                manager.move(v, 0, w)
+            if abs(e_p) < 0.1 and abs(e_r) < 0.1:
+                manager.trigger_replan()
+            # 模拟 odom 随目标变化
+            manager.homo_odom = manager.homo_goal.copy()
+            time.sleep(0.1)
+        manager.running = False
+
+    def planning_thread():
+        while manager.running:
+            if not manager.should_plan:
+                time.sleep(0.05)
+                continue
+            print(f"planning_thread running")
+            rgb_rw_lock.acquire_read()
+            rgb_image = manager.rgb_image.copy() if manager.rgb_image is not None else None
+            rgb_rw_lock.release_read()
+            if rgb_image is None:
+                time.sleep(0.1)
+                continue
+            actions = eval_vln(rgb_image, manager.instruction)
+            print(f"actions: {actions}")
+            odom_rw_lock.acquire_write()
+            manager.should_plan = False
+            manager.request_cnt += 1
+            manager.incremental_change_goal(actions)
+            odom_rw_lock.release_write()
+            time.sleep(0.1)
+
+    # 启动线程
+    t1 = threading.Thread(target=control_thread)
+    t2 = threading.Thread(target=planning_thread)
     t1.start()
     t2.start()
-    try:
-        rclpy.spin(manager)
-    except KeyboardInterrupt:
-        pass
-    finally:
-        manager.destroy_node()
-        rclpy.shutdown()
+
+    t1.join()
+    t2.join()
+    print("Test finished.")
+
+if __name__ == "__main__":
+    test()
+
+# if __name__ == '__main__':
+    # rclpy.init()
+    # global manager
+    # manager = D1VlnManager()
+    # t1 = threading.Thread(target=control_thread, daemon=True)
+    # t2 = threading.Thread(target=planning_thread, daemon=True)
+    # t1.start()
+    # t2.start()
+    # try:
+    #     rclpy.spin(manager)
+    # except KeyboardInterrupt:
+    #     pass
+    # finally:
+    #     manager.destroy_node()
+    #     rclpy.shutdown()
