@@ -205,169 +205,22 @@ class D1VlnManager(object):
 
     def move(self, vx, vy, vyaw):
         msg = Twist()
-        msg.linear.x = float(vx)
-        msg.linear.y = float(vy)
-        msg.angular.z = float(vyaw)
+        # 步進模式：每次發送前需鍵盤確認
+        try:
+            user_input = input(f"Send cmd_vel? v={vx:.3f}, vy={vy:.3f}, w={vyaw:.3f} (Enter=發送, 其他=0): ")
+            if user_input.strip() == '':
+                msg.linear.x = float(vx)
+                msg.linear.y = float(vy)
+                msg.angular.z = float(vyaw)
+            else:
+                msg.linear.x = 0.0
+                msg.linear.y = 0.0
+                msg.angular.z = 0.0
+        except Exception:
+            msg.linear.x = 0.0
+            msg.linear.y = 0.0
+            msg.angular.z = 0.0
         self.cmd_pub.publish(msg)
-
-
-# def create_fake_image_msg():
-#     msg = Image()
-#     msg.header = Header()
-#     msg.header.stamp = rospy.Time.now()
-#     msg.height = 224
-#     msg.width = 224
-#     msg.encoding = 'rgb8'
-#     msg.is_bigendian = 0
-#     msg.step = 224 * 3
-#     arr = np.random.randint(0, 255, (224, 224, 3), dtype=np.uint8)
-#     msg.data = arr.tobytes()
-#     return msg
-
-# def create_fake_odom_msg(
-#     x=1.0, y=2.0, yaw=0.5, vx=0.1, wz=0.05,
-#     dt=0.1, control=None, prev_state=None
-# ):
-#     """
-#     质点运动模型：
-#     prev_state: dict, 包含'x', 'y', 'yaw', 'vx', 'wz'，若提供则用其为初始状态
-#     control: dict, 包含'vx', 'wz'，控制输入
-#     dt: 步长
-#     返回新的Odometry消息
-#     """
-#     if prev_state is not None:
-#         x = prev_state.get('x', x)
-#         y = prev_state.get('y', y)
-#         yaw = prev_state.get('yaw', yaw)
-#         vx = prev_state.get('vx', vx)
-#         wz = prev_state.get('wz', wz)
-#     if control is not None:
-#         vx = control.get('vx', vx)
-#         wz = control.get('wz', wz)
-#     # 简单积分
-#     x_new = x + vx * np.cos(yaw) * dt
-#     y_new = y + vx * np.sin(yaw) * dt
-#     yaw_new = yaw + wz * dt
-#     msg = Odometry()
-#     msg.header = Header()
-#     msg.header.stamp = rospy.Time.now()
-#     msg.header.frame_id = "odom"
-#     msg.child_frame_id = "base_link"
-#     # 设置pose
-#     msg.pose.pose.position = Point(x=x_new, y=y_new, z=0.0)
-#     q = Quaternion()
-#     q.x = 0.0
-#     q.y = 0.0
-#     q.z = math.sin(yaw_new/2)
-#     q.w = math.cos(yaw_new/2)
-#     msg.pose.pose.orientation = q
-#     # 设置twist
-#     msg.twist.twist.linear = Vector3(x=vx, y=0.0, z=0.0)
-#     msg.twist.twist.angular = Vector3(x=0.0, y=0.0, z=wz)
-#     # 返回新状态，便于下次积分
-#     new_state = {'x': x_new, 'y': y_new, 'yaw': yaw_new, 'vx': vx, 'wz': wz}
-#     print(f"Generated fake odom: x={x_new:.2f}, y={y_new:.2f}, yaw={yaw_new:.2f}, vx={vx:.2f}, wz={wz:.2f}")
-#     return msg, new_state
-
-# def test_fake_ros_pub():
-    # import matplotlib.pyplot as plt
-    # from matplotlib.animation import FuncAnimation
-    #     # 轨迹可视化
-    # traj_x, traj_y = [], []
-    # odom_x, odom_y = [], []
-    # goal_x, goal_y = [], []
-    # v_list = []
-    # rospy.init_node('fake_data_publisher')
-    # rgb_pub = rospy.Publisher('/odin1/image/undistorted', Image, queue_size=1)
-    # odom_pub = rospy.Publisher('/odin1/odometry_highfreq', Odometry, queue_size=1)
-    # global manager
-    # manager = D1VlnManager()
-    # # 先发布一帧，确保回调初始化
-    # rgb_msg = create_fake_image_msg()
-    # odom_msg, state = create_fake_odom_msg()
-    # rgb_pub.publish(rgb_msg)
-    # odom_pub.publish(odom_msg)
-    # traj_x.append(state['x'])
-    # traj_y.append(state['y'])
-    # # 初始odom/goal
-    # odom_x.append(state['x'])
-    # odom_y.append(state['y'])
-    # goal_x.append(state['x'])
-    # goal_y.append(state['y'])
-    # v_list.append(state['vx'])
-    # # 等待回调初始化关键属性
-    # for _ in range(20):
-    #     if getattr(manager, 'homo_odom', None) is not None and getattr(manager, 'should_plan', None) is not None:
-    #         break
-    #     time.sleep(0.05)
-    # t1 = threading.Thread(target=control_thread, daemon=True)
-    # t2 = threading.Thread(target=planning_thread, daemon=True)
-    # t1.start()
-    # t2.start()
-    # # 初始化质点状态
-    # state = {'x': 0.0, 'y': 0.0, 'yaw': 0.0, 'vx': 0.0, 'wz': 0.00}
-    # last_control = {'vx': 0.0, 'wz': 0.00}
-    # try:
-    #     import matplotlib.pyplot as plt
-    #     plt.ion()
-    #     fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(7, 10))
-    #     ax1.set_title('Particle Trajectory and Goals')
-    #     ax1.set_xlabel('x')
-    #     ax1.set_ylabel('y')
-    #     line_traj, = ax1.plot([], [], 'b.-', label='Sim Traj')
-    #     line_odom, = ax1.plot([], [], 'go', label='homo_odom')
-    #     line_goal, = ax1.plot([], [], 'rx', label='homo_goal')
-    #     ax1.legend()
-    #     ax2.set_title('Control v')
-    #     ax2.set_xlabel('step')
-    #     ax2.set_ylabel('v (m/s)')
-    #     line_v, = ax2.plot([], [], 'm.-', label='v')
-    #     ax2.legend()
-    #     for _ in range(200):
-    #         rgb_msg = create_fake_image_msg()
-    #         # 从manager.vel获取最新控制命令
-    #         if hasattr(manager, 'vel') and manager.vel is not None:
-    #             last_control = {'vx': float(manager.vel[0]), 'wz': float(manager.vel[1])}
-    #         odom_msg, state = create_fake_odom_msg(prev_state=state, control=last_control)
-    #         rgb_pub.publish(rgb_msg)
-    #         odom_pub.publish(odom_msg)
-    #         traj_x.append(state['x'])
-    #         traj_y.append(state['y'])
-    #         v_list.append(state['vx'])
-    #         # 提取homo_odom/homo_goal
-    #         if hasattr(manager, 'homo_odom') and manager.homo_odom is not None:
-    #             odom_x.append(manager.homo_odom[0, 3])
-    #             odom_y.append(manager.homo_odom[1, 3])
-    #         else:
-    #             odom_x.append(np.nan)
-    #             odom_y.append(np.nan)
-    #         if hasattr(manager, 'homo_goal') and manager.homo_goal is not None:
-    #             goal_x.append(manager.homo_goal[0, 3])
-    #             goal_y.append(manager.homo_goal[1, 3])
-    #         else:
-    #             goal_x.append(np.nan)
-    #             goal_y.append(np.nan)
-    #         # 实时更新轨迹
-    #         line_traj.set_data(traj_x, traj_y)
-    #         line_odom.set_data(odom_x, odom_y)
-    #         line_goal.set_data(goal_x, goal_y)
-    #         ax1.relim()
-    #         ax1.autoscale_view()
-    #         line_v.set_data(range(len(v_list)), v_list)
-    #         ax2.relim()
-    #         ax2.autoscale_view()
-    #         plt.pause(0.01)
-    #         time.sleep(0.1)
-    #     print('Fake data publishing finished.')
-    #     plt.ioff()
-    #     plt.show()
-    # except KeyboardInterrupt:
-    #     print('Interrupted.')
-    # finally:
-    #     print('Test finished.')
-
-# if __name__ == "__main__":
-#     test_fake_ros_pub()
 
 if __name__ == '__main__':
     rospy.init_node('d1_vln_client')
