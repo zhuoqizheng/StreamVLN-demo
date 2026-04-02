@@ -1,4 +1,6 @@
+logs/
+image_data/
 *.pyc
-*.png
-./checkpoints/
-./logs/
+checkpoints/
+.vscode/
+.venv/
