@@ -1,6 +1,6 @@
 logs/
 image_data/
 *.pyc
-checkpoints/
 .vscode/
+__pycache__/
 .venv/
