@@ -1,3 +1,5 @@
+### Added support for realworld deployment on Agibot D1 quadruped robot and optimized the controller 
+
 <br>
 <p align="center">
 <h1 align="center"><strong>StreamVLN: Streaming Vision-and-Language Navigation via SlowFast Context Modeling</strong></h1>
